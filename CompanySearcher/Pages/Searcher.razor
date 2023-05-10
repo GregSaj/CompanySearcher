@@ -1,0 +1,159 @@
+﻿@page "/searcher"
+@using CompanySearcher.Models;
+@using System.Reflection;
+@using static System.Net.WebRequestMethods;
+@inject HttpClient Http
+
+<PageTitle>Searcher</PageTitle>
+
+<MudSelect @bind-Value="@chooseOption" T="string" Label="Search by" Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter">
+    <MudSelectItem T="string" Value="@("NIP")" />
+    <MudSelectItem T="string" Value="@("Regon")" />
+    <MudSelectItem T="string" Value="@("Bank Account")" />
+</MudSelect>
+<hr />
+<br />
+<MudTextField @bind-Value="dataInput" Label="Enter number" Variant="Variant.Outlined"></MudTextField>
+<hr />
+<br />
+<MudDatePicker Label="Enter date" @bind-Date="date" />
+<hr />
+<br />
+@*<div style="text-align:center">*@
+@* <MudButton Variant="Variant.Filled" Style="text-align:center" DisableElevation="true" @onclick="searchCompanyByNIP" Color="Color.Primary">Check for company</MudButton>*@
+@*</div>*@
+<MudGrid>
+    <MudItem xs="12" Class="d-flex align-center justify-center mud-width-full py-8">
+        <MudButton Variant="Variant.Filled" Style="text-align:center" DisableElevation="true" @onclick="searchCompanyByNIP" Color="Color.Primary">Check for company</MudButton>
+    </MudItem>
+</MudGrid>
+
+
+@if (searcherModel != null)
+{
+    @searcherModel.result.subject.name
+    ;
+    <hr />
+    <br />
+    @searcherModel.result.subject.workingAddress
+    ;
+    <hr />
+    <br />
+    @searcherModel.result.subject.statusVat
+    ;
+    <hr />
+    <br />
+    @searcherModel.result.subject.registrationDenialDate
+    ;
+    <hr />
+    <br />
+
+    @*Type t = searcherModel.result.subject.GetType();
+    PropertyInfo[] props = t.GetProperties();
+
+    foreach (var item in props) // jak zrobić żeby wyświetliło wszystkie properties klasy i calosc informacji o przedsiebiorstwie
+    {
+        @item.PropertyType.Name
+        ;
+        @item.GetValue(t)
+        ;
+    }*@
+
+    Type t = searcherModel.result.subject.GetType();
+
+    PropertyInfo[] props = t.GetProperties();
+
+    @* foreach (var item in props)
+    {
+        @item.PropertyType.Name
+        ;
+
+        @item.GetType().GetProperty(item.Name).GetValue(searcherModel, null);
+        ;
+
+    }*@
+
+
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Value</th>
+            </tr>
+        </thead>
+        <tbody>
+
+
+            @foreach (var prop in searcherModel.result.subject.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance))
+            {
+                var propertyName = prop.Name;
+                var propertyValue = searcherModel.result.subject.GetType().GetProperty(propertyName).GetValue(searcherModel.result.subject, null);
+
+                <tr>
+
+                    <td>
+                        @propertyName
+
+                    </td>
+                    <td>
+                        @propertyValue
+
+                    </td>
+
+                </tr>
+
+            }
+
+        </tbody>
+    </table>
+
+
+
+}
+
+
+
+
+@code {
+    DateTime? date = DateTime.Today;
+    public string formatedDate;
+    public string dataInput;
+
+
+    public string TextValue { get; set; }
+    private SearchResultsModel searcherModel;
+
+
+    string chooseOption = "NIP";
+
+    private const string GOVSiteNIP = "https://wl-api.mf.gov.pl/api/search/nip/8971612750?date=2021-12-21";
+
+    private async Task searchCompanyByNIP()
+    {
+        formatedDate = date.Value.ToString("yyyy-MM-dd");
+
+
+        //zamienić if na switch case;
+        if (chooseOption == "NIP")
+        {
+            string urlRequest = $"https://wl-api.mf.gov.pl/api/search/nip/{dataInput}?date={formatedDate}";
+            searcherModel = await Http.GetFromJsonAsync<SearchResultsModel>(urlRequest);
+
+        }
+        else if (chooseOption == "Regon")
+        {
+            string urlRequest = $"https://wl-api.mf.gov.pl/api/search/regon/{dataInput}?date={formatedDate}";
+            searcherModel = await Http.GetFromJsonAsync<SearchResultsModel>(urlRequest);
+
+        }
+        else
+        {
+            string urlRequest = $"https://wl-api.mf.gov.pl/api/search/bank-account/{dataInput}?date={formatedDate}";
+            searcherModel = await Http.GetFromJsonAsync<SearchResultsModel>(urlRequest);
+        }
+
+
+    }
+
+}
+
